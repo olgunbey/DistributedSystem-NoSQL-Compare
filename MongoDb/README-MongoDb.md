@@ -41,7 +41,7 @@ Bu, verinin kaç düğüme yazıldıktan sonra "başarılı" kabul edileceğini 
 ## MongoDB: Çoğunluk Kaybında Tüm Düğümlerin Secondary Olması
 - MongoDB replikasında primary seçimi için çoğunluk (majority) sağlanmalıdır. Örneğin 5 düğümlü bir kümede en az 3 düğüm ayakta olmalıdır.
 - Eğer çoğunluk sağlanmazsa, mevcut primary dahil tüm düğümler secondary moduna geçer. Bu durumda yazma işlemleri durur.
-- Varsayılan Read Preference değeri primary olduğu için, primary olmadığında okuma da yapılamaz.
+- Varsayılan Read Preference değeri primary olduğu için okuma da yapılamaz.
 - Okumaya devam edebilmek için Read Preference değerini secondary veya secondaryPreferred olarak değiştirmek gerekir.
 
 
