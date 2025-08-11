@@ -15,18 +15,19 @@ static async Task AddToCollection()
 
         var person = new Person
         {
-            Name = "Olgunbey Şahin",
-            Age = 24
+            Name = "Ulaş",
+            Age = 21
         };
         var options = new MongoCollectionSettings
         {
-            WriteConcern = new WriteConcern(WriteConcern.WMode.Majority)
+            WriteConcern = new WriteConcern(new WriteConcern.WCount(1))
         };
         var collection = database.GetCollection<BsonDocument>("testCollection", options);
         var bsonDocument = BsonDocument.Parse(JsonSerializer.Serialize(person));
         await collection.InsertOneAsync(bsonDocument);
     }
 }
+
 
 static async Task<List<BsonDocument>> ReadCollection()
 {
@@ -38,18 +39,18 @@ static async Task<List<BsonDocument>> ReadCollection()
 
         var person = new Person
         {
-            Name = "John Doe",
+            Name = "Arda dsd",
             Age = 30
         };
         var options = new MongoCollectionSettings
         {
+            ReadPreference = ReadPreference.Secondary,
             ReadConcern = new ReadConcern(ReadConcernLevel.Available)
         };
         try
         {
             var collection = database.GetCollection<BsonDocument>("testCollection", options);
-            var bsonDocument = BsonDocument.Parse(JsonSerializer.Serialize(person));
-            var data =(await collection.FindAsync(FilterDefinition<BsonDocument>.Empty)).ToList();
+            var data = (await collection.FindAsync(FilterDefinition<BsonDocument>.Empty)).ToList();
             return data;
         }
         catch (Exception)
@@ -57,16 +58,13 @@ static async Task<List<BsonDocument>> ReadCollection()
 
             throw;
         }
-       
-
-        
     }
 }
 
 Console.WriteLine("Hello, World!");
 
-await AddToCollection();
-//await ReadCollection();
+//await AddToCollection();
+await ReadCollection();
 
 Console.ReadLine();
 

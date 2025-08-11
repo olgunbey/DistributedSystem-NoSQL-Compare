@@ -6,7 +6,7 @@ Bu doküman, MongoDB'nin replikasyon yönetimi, read/write concern, read preferenc
 
 ## MongoDB Replikalarý Nasýl Yönetir?
 
-MongoDB, verileri tek bir düðüme, yani **primary** düðüme yazar. Daha sonra bu primary düðüm, deðiþiklikleri **secondary** düðümlere aktarýr ve onlarý güncel tutar.
+MongoDB, verileri tek bir düðüme, yani **primary** düðüme yazar. Daha sonra bu primary düðüm, deðiþiklikleri **OPLOG** aracýlýðý ile  **secondary** düðümlere aktarýr ve onlarý güncel tutar.
 
 Ancak, NoSQL veritabanlarý arasýnda replikasyon ve tutarlýlýk yaklaþýmlarý farklýlýk gösterebilir. MongoDB, **CAP Teoremi** kapsamýnda yapýlandýrýlabilir; yani kullaným senaryosuna baðlý olarak:
 
@@ -16,6 +16,8 @@ Ancak, NoSQL veritabanlarý arasýnda replikasyon ve tutarlýlýk yaklaþýmlarý farkl
 Bu tercihler, okuma-yazma tercihlerine (read/write concern) ve replica set ayarlarýna göre esnek þekilde yönetilir.
 
 ---
+
+
 
 ## Primary Düðüm, Secondary Düðümleri Nasýl Besler?
 
@@ -27,6 +29,21 @@ Bu tercihler, okuma-yazma tercihlerine (read/write concern) ve replica set ayarl
 - Böylece zamanla tüm düðümlerdeki veriler ayný duruma gelir (**eventual consistency**).
 
 ---
+
+## WriteConcern Nedir?
+MongoDB’de WriteConcern, bir yazma iþleminin ne kadar güvenli ve garanti edilmiþ þekilde tamamlanacaðýný belirleyen mekanizmadýr.
+Bu, verinin kaç düðüme yazýldýktan sonra "baþarýlý" kabul edileceðini tanýmlar.
+- Varsayýlan olarak w parametresi majority (çoðunluk) deðerindedir. Bu, replika setindeki düðümlerin çoðunluðu yazma iþlemini onaylamadan iþlem tamamlanmýþ sayýlmaz demektir.
+- Örneðin elimizde 5 düðüm (1 Primary, 4 Secondary) varsa, w: majority demek en az 3 düðümün yazmayý onaylamasý gerektiði anlamýna gelir.
+- Eðer w: 2 yazarsak, çoðunluk yerine en az 2 düðüme yazýldýðýnda iþlem baþarýlý kabul edilir. Bu, yazma iþlemini hýzlandýrabilir ancak veri kaybý riskini artýrýr.
+
+---
+## MongoDB: Çoðunluk Kaybýnda Tüm Düðümlerin Secondary Olmasý
+- MongoDB replikasýnda primary seçimi için çoðunluk (majority) saðlanmalýdýr. Örneðin 5 düðümlü bir kümede en az 3 düðüm ayakta olmalýdýr.
+- Eðer çoðunluk saðlanmazsa, mevcut primary dahil tüm düðümler secondary moduna geçer. Bu durumda yazma iþlemleri durur.
+- Varsayýlan Read Preference deðeri primary olduðu için, primary olmadýðýnda okuma da yapýlamaz.
+- Okumaya devam edebilmek için Read Preference deðerini secondary veya secondaryPreferred olarak deðiþtirmek gerekir.
+
 
 ## Read Preference Nedir?
 
@@ -189,3 +206,4 @@ MongoDB, replikasyon ve tutarlýlýk yönetimini, replica set yapýsý ile primary-se
 - Replica Set ve Sharding mimarileri  
 
 ---
+
