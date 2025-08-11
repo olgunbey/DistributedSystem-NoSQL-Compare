@@ -1,208 +1,207 @@
-# MongoDB Replikasyon, Tutarlılık ve Sharding Detayları
+# MongoDB Replikasyon, TutarlÄ±lÄ±k ve Sharding DetaylarÄ±
 
-Bu doküman, MongoDB'nin replikasyon yönetimi, read/write concern, read preference ve yatay sharding mekanizmalarını örneklerle detaylı şekilde açıklar.
-
----
-
-## MongoDB Replikaları Nasıl Yönetir?
-
-MongoDB, verileri tek bir düğüme, yani **primary** düğüme yazar. Daha sonra bu primary düğüm, değişiklikleri **OPLOG** aracılığı ile  **secondary** düğümlere aktarır ve onları güncel tutar.
-
-Ancak, NoSQL veritabanları arasında replikasyon ve tutarlılık yaklaşımları farklılık gösterebilir. MongoDB, **CAP Teoremi** kapsamında yapılandırılabilir; yani kullanım senaryosuna bağlı olarak:
-
-- **CP (Consistency + Partition Tolerance)** modu ile güçlü tutarlılık sağlanabilir,  
-- veya **AP (Availability + Partition Tolerance)** modu ile yüksek erişilebilirlik ön planda tutulabilir.
-
-Bu tercihler, okuma-yazma tercihlerine (read/write concern) ve replica set ayarlarına göre esnek şekilde yönetilir.
+Bu dokÃ¼man, MongoDB'nin replikasyon yÃ¶netimi, read/write concern, read preference ve yatay sharding mekanizmalarÄ±nÄ± Ã¶rneklerle detaylÄ± ÅŸekilde aÃ§Ä±klar.
 
 ---
 
+## MongoDB ReplikalarÄ± NasÄ±l YÃ¶netir?
+
+MongoDB, verileri tek bir dÃ¼ÄŸÃ¼me, yani **primary** dÃ¼ÄŸÃ¼me yazar. Daha sonra bu primary dÃ¼ÄŸÃ¼m, deÄŸiÅŸiklikleri **OPLOG** aracÄ±lÄ±ÄŸÄ± ile  **secondary** dÃ¼ÄŸÃ¼mlere aktarÄ±r ve onlarÄ± gÃ¼ncel tutar.
+
+Ancak, NoSQL veritabanlarÄ± arasÄ±nda replikasyon ve tutarlÄ±lÄ±k yaklaÅŸÄ±mlarÄ± farklÄ±lÄ±k gÃ¶sterebilir. MongoDB, **CAP Teoremi** kapsamÄ±nda yapÄ±landÄ±rÄ±labilir; yani kullanÄ±m senaryosuna baÄŸlÄ± olarak:
+
+- **CP (Consistency + Partition Tolerance)** modu ile gÃ¼Ã§lÃ¼ tutarlÄ±lÄ±k saÄŸlanabilir,  
+- veya **AP (Availability + Partition Tolerance)** modu ile yÃ¼ksek eriÅŸilebilirlik Ã¶n planda tutulabilir.
+
+Bu tercihler, okuma-yazma tercihlerine (read/write concern) ve replica set ayarlarÄ±na gÃ¶re esnek ÅŸekilde yÃ¶netilir.
+
+---
 
 
-## Primary Düğüm, Secondary Düğümleri Nasıl Besler?
 
-- Veriler öncelikle **primary** düğüme yazılır.  
-- Yazma işlemi başarılı olursa, değişiklikler **OPLOG (işlem günlüğü)** adlı özel bir kayıt dosyasına kaydedilir.  
-- Eğer yapılan işlem veri üzerinde değişiklik yaratmıyorsa ya da başarısız olursa, bu işlem OPLOG’a yazılmaz.  
-- **Secondary** düğümler ise OPLOG’u sürekli izler ve burada kayıtlı işlemleri kendi veritabanlarına sırayla uygular.  
-- Bu süreç hızlı olmakla birlikte tamamen anlık değildir; yani secondary düğümler primary düğümdeki değişiklikleri küçük bir gecikmeyle alır ve günceller.  
-- Böylece zamanla tüm düğümlerdeki veriler aynı duruma gelir (**eventual consistency**).
+## Primary DÃ¼ÄŸÃ¼m, Secondary DÃ¼ÄŸÃ¼mleri NasÄ±l Besler?
+
+- Veriler Ã¶ncelikle **primary** dÃ¼ÄŸÃ¼me yazÄ±lÄ±r.  
+- Yazma iÅŸlemi baÅŸarÄ±lÄ± olursa, deÄŸiÅŸiklikler **OPLOG (iÅŸlem gÃ¼nlÃ¼ÄŸÃ¼)** adlÄ± Ã¶zel bir kayÄ±t dosyasÄ±na kaydedilir.  
+- EÄŸer yapÄ±lan iÅŸlem veri Ã¼zerinde deÄŸiÅŸiklik yaratmÄ±yorsa ya da baÅŸarÄ±sÄ±z olursa, bu iÅŸlem OPLOGâ€™a yazÄ±lmaz.  
+- **Secondary** dÃ¼ÄŸÃ¼mler ise OPLOGâ€™u sÃ¼rekli izler ve burada kayÄ±tlÄ± iÅŸlemleri kendi veritabanlarÄ±na sÄ±rayla uygular.  
+- Bu sÃ¼reÃ§ hÄ±zlÄ± olmakla birlikte tamamen anlÄ±k deÄŸildir; yani secondary dÃ¼ÄŸÃ¼mler primary dÃ¼ÄŸÃ¼mdeki deÄŸiÅŸiklikleri kÃ¼Ã§Ã¼k bir gecikmeyle alÄ±r ve gÃ¼nceller.  
+- BÃ¶ylece zamanla tÃ¼m dÃ¼ÄŸÃ¼mlerdeki veriler aynÄ± duruma gelir (**eventual consistency**).
 
 ---
 
 ## WriteConcern Nedir?
-MongoDB’de WriteConcern, bir yazma işleminin ne kadar güvenli ve garanti edilmiş şekilde tamamlanacağını belirleyen mekanizmadır.
-Bu, verinin kaç düğüme yazıldıktan sonra "başarılı" kabul edileceğini tanımlar.
-- Varsayılan olarak w parametresi majority (çoğunluk) değerindedir. Bu, replika setindeki düğümlerin çoğunluğu yazma işlemini onaylamadan işlem tamamlanmış sayılmaz demektir.
-- Örneğin elimizde 5 düğüm (1 Primary, 4 Secondary) varsa, w: majority demek en az 3 düğümün yazmayı onaylaması gerektiği anlamına gelir.
-- Eğer w: 2 yazarsak, çoğunluk yerine en az 2 düğüme yazıldığında işlem başarılı kabul edilir. Bu, yazma işlemini hızlandırabilir ancak veri kaybı riskini artırır.
+MongoDBâ€™de WriteConcern, bir yazma iÅŸleminin ne kadar gÃ¼venli ve garanti edilmiÅŸ ÅŸekilde tamamlanacaÄŸÄ±nÄ± belirleyen mekanizmadÄ±r.
+Bu, verinin kaÃ§ dÃ¼ÄŸÃ¼me yazÄ±ldÄ±ktan sonra "baÅŸarÄ±lÄ±" kabul edileceÄŸini tanÄ±mlar.
+- VarsayÄ±lan olarak w parametresi majority (Ã§oÄŸunluk) deÄŸerindedir. Bu, replika setindeki dÃ¼ÄŸÃ¼mlerin Ã§oÄŸunluÄŸu yazma iÅŸlemini onaylamadan iÅŸlem tamamlanmÄ±ÅŸ sayÄ±lmaz demektir.
+- Ã–rneÄŸin elimizde 5 dÃ¼ÄŸÃ¼m (1 Primary, 4 Secondary) varsa, w: majority demek en az 3 dÃ¼ÄŸÃ¼mÃ¼n yazmayÄ± onaylamasÄ± gerektiÄŸi anlamÄ±na gelir.
+- EÄŸer w: 2 yazarsak, Ã§oÄŸunluk yerine en az 2 dÃ¼ÄŸÃ¼me yazÄ±ldÄ±ÄŸÄ±nda iÅŸlem baÅŸarÄ±lÄ± kabul edilir. Bu, yazma iÅŸlemini hÄ±zlandÄ±rabilir ancak veri kaybÄ± riskini artÄ±rÄ±r.
 
 ---
-## MongoDB: Çoğunluk Kaybında Tüm Düğümlerin Secondary Olması
-- MongoDB replikasında primary seçimi için çoğunluk (majority) sağlanmalıdır. Örneğin 5 düğümlü bir kümede en az 3 düğüm ayakta olmalıdır.
-- Eğer çoğunluk sağlanmazsa, mevcut primary dahil tüm düğümler secondary moduna geçer. Bu durumda yazma işlemleri durur.
-- Varsayılan Read Preference değeri primary olduğu için, primary olmadığında okuma da yapılamaz.
-- Okumaya devam edebilmek için Read Preference değerini secondary veya secondaryPreferred olarak değiştirmek gerekir.
+## MongoDB: Ã‡oÄŸunluk KaybÄ±nda TÃ¼m DÃ¼ÄŸÃ¼mlerin Secondary OlmasÄ±
+- MongoDB replikasÄ±nda primary seÃ§imi iÃ§in Ã§oÄŸunluk (majority) saÄŸlanmalÄ±dÄ±r. Ã–rneÄŸin 5 dÃ¼ÄŸÃ¼mlÃ¼ bir kÃ¼mede en az 3 dÃ¼ÄŸÃ¼m ayakta olmalÄ±dÄ±r.
+- EÄŸer Ã§oÄŸunluk saÄŸlanmazsa, mevcut primary dahil tÃ¼m dÃ¼ÄŸÃ¼mler secondary moduna geÃ§er. Bu durumda yazma iÅŸlemleri durur.
+- VarsayÄ±lan Read Preference deÄŸeri primary olduÄŸu iÃ§in, primary olmadÄ±ÄŸÄ±nda okuma da yapÄ±lamaz.
+- Okumaya devam edebilmek iÃ§in Read Preference deÄŸerini secondary veya secondaryPreferred olarak deÄŸiÅŸtirmek gerekir.
 
 
 ## Read Preference Nedir?
 
-MongoDB, replikasyon yapısıyla birden fazla düğüm (node) üzerinde veri tutar. Okuma işlemlerinde hangi düğümden veri çekileceğini belirlemek için **read preference (okuma tercihi)** kullanılır.
+MongoDB, replikasyon yapÄ±sÄ±yla birden fazla dÃ¼ÄŸÃ¼m (node) Ã¼zerinde veri tutar. Okuma iÅŸlemlerinde hangi dÃ¼ÄŸÃ¼mden veri Ã§ekileceÄŸini belirlemek iÃ§in **read preference (okuma tercihi)** kullanÄ±lÄ±r.
 
-Bu tercih, uygulamanın performans, tutarlılık ve erişilebilirlik ihtiyaçlarına göre ayarlanabilir.
+Bu tercih, uygulamanÄ±n performans, tutarlÄ±lÄ±k ve eriÅŸilebilirlik ihtiyaÃ§larÄ±na gÃ¶re ayarlanabilir.
 
-### Read Preference Türleri
+### Read Preference TÃ¼rleri
 
-1. **Primary (varsayılan)**  
-   Okumalar sadece primary üzerinden yapılır.  
-   En güçlü tutarlılık sağlar çünkü primary'deki veri en güncel olanıdır.
+1. **Primary (varsayÄ±lan)**  
+   Okumalar sadece primary Ã¼zerinden yapÄ±lÄ±r.  
+   En gÃ¼Ã§lÃ¼ tutarlÄ±lÄ±k saÄŸlar Ã§Ã¼nkÃ¼ primary'deki veri en gÃ¼ncel olanÄ±dÄ±r.
 
 2. **Secondary**  
-   Okumalar sadece secondary düğümlerden yapılır.  
-   Primary’den farklı düğümlere yük dağıtmak için kullanılır.  
-   Secondary düğümler, primary düğümde gerçekleşen değişiklikleri OPLOG üzerinden takip eder ve kendi kopyalarına uygularlar. Eğer bir secondary düğüm, çeşitli nedenlerle OPLOG’daki güncellemeleri alamaz veya gecikmeli alırsa, o düğümdeki veri primary ile aynı anda güncel olmaz. Bu durumda kısa süreli tutarsızlık (eventual consistency) olur.
+   Okumalar sadece secondary dÃ¼ÄŸÃ¼mlerden yapÄ±lÄ±r.  
+   Primaryâ€™den farklÄ± dÃ¼ÄŸÃ¼mlere yÃ¼k daÄŸÄ±tmak iÃ§in kullanÄ±lÄ±r.  
+   Secondary dÃ¼ÄŸÃ¼mler, primary dÃ¼ÄŸÃ¼mde gerÃ§ekleÅŸen deÄŸiÅŸiklikleri OPLOG Ã¼zerinden takip eder ve kendi kopyalarÄ±na uygularlar. EÄŸer bir secondary dÃ¼ÄŸÃ¼m, Ã§eÅŸitli nedenlerle OPLOGâ€™daki gÃ¼ncellemeleri alamaz veya gecikmeli alÄ±rsa, o dÃ¼ÄŸÃ¼mdeki veri primary ile aynÄ± anda gÃ¼ncel olmaz. Bu durumda kÄ±sa sÃ¼reli tutarsÄ±zlÄ±k (eventual consistency) olur.
 
 3. **primaryPreferred**  
-   Öncelikle primary düğümden okuma gerçekleşir.  
-   Eğer primary erişilemiyorsa secondary düğümden okur.  
-   Böylelikle yüksek erişilebilirlik sağlanır.
+   Ã–ncelikle primary dÃ¼ÄŸÃ¼mden okuma gerÃ§ekleÅŸir.  
+   EÄŸer primary eriÅŸilemiyorsa secondary dÃ¼ÄŸÃ¼mden okur.  
+   BÃ¶ylelikle yÃ¼ksek eriÅŸilebilirlik saÄŸlanÄ±r.
 
 4. **secondaryPreferred**  
-   Öncelikle secondary düğümlerden okumaya çalışır.  
-   Eğer secondary düğüm yoksa ya da erişilemiyorsa, primary düğümden okur.
+   Ã–ncelikle secondary dÃ¼ÄŸÃ¼mlerden okumaya Ã§alÄ±ÅŸÄ±r.  
+   EÄŸer secondary dÃ¼ÄŸÃ¼m yoksa ya da eriÅŸilemiyorsa, primary dÃ¼ÄŸÃ¼mden okur.
 
 5. **nearest**  
-   En düşük gecikmeye sahip (network latency) düğümden okuma yapar.  
+   En dÃ¼ÅŸÃ¼k gecikmeye sahip (network latency) dÃ¼ÄŸÃ¼mden okuma yapar.  
    Bu hem primary hem secondary olabilir.  
-   Performans odaklı uygulamalarda kullanılır.
+   Performans odaklÄ± uygulamalarda kullanÄ±lÄ±r.
 
 ---
 
 ## Read/Write Concern Nedir?
 
-**Write concern** ve **read concern** ayarlarını etkili şekilde kullanarak, tutarlılık ve erişilebilirlik seviyelerini ihtiyaca göre ayarlayabilirsiniz. Örneğin, daha güçlü tutarlılık garantileri için işlemlerin tamamlanmasını bekleyebilir veya tutarlılık gereksinimlerini gevşeterek daha yüksek erişilebilirlik sağlayabilirsiniz.
+**Write concern** ve **read concern** ayarlarÄ±nÄ± etkili ÅŸekilde kullanarak, tutarlÄ±lÄ±k ve eriÅŸilebilirlik seviyelerini ihtiyaca gÃ¶re ayarlayabilirsiniz. Ã–rneÄŸin, daha gÃ¼Ã§lÃ¼ tutarlÄ±lÄ±k garantileri iÃ§in iÅŸlemlerin tamamlanmasÄ±nÄ± bekleyebilir veya tutarlÄ±lÄ±k gereksinimlerini gevÅŸeterek daha yÃ¼ksek eriÅŸilebilirlik saÄŸlayabilirsiniz.
 
 ---
 
-## Read Concern Türleri
+## Read Concern TÃ¼rleri
 
 1. **Local**  
-   Varsayılan ayarlarda okuma yaparken, verinin çoğunluk tarafından kabul edilip edilmediği kontrol edilmez; bu nedenle okunan veri henüz tam olarak kalıcı olmayabilir ve ileride geri alınabilir.  
-   Orphaned doküman riski düşüktür, çünkü okuma sadece ilgili shard’daki veriye odaklanır.
+   VarsayÄ±lan ayarlarda okuma yaparken, verinin Ã§oÄŸunluk tarafÄ±ndan kabul edilip edilmediÄŸi kontrol edilmez; bu nedenle okunan veri henÃ¼z tam olarak kalÄ±cÄ± olmayabilir ve ileride geri alÄ±nabilir.  
+   Orphaned dokÃ¼man riski dÃ¼ÅŸÃ¼ktÃ¼r, Ã§Ã¼nkÃ¼ okuma sadece ilgili shardâ€™daki veriye odaklanÄ±r.
 
 2. **Available**  
-   Sharded koleksiyonlarda yetim doküman (orphaned document) dönme riski vardır.  
-   Performans odaklı, tutarlılıktan biraz daha ödün veren senaryolarda kullanılır.  
-   Sharded clusterlarda en düşük gecikmeli okuma sağlar.  
-   En düşük tutarlılık seviyesidir.  
-   Çok yüksek performansın, tutarlılıktan daha önemli olduğu özel durumlar için uygundur.
+   Sharded koleksiyonlarda yetim dokÃ¼man (orphaned document) dÃ¶nme riski vardÄ±r.  
+   Performans odaklÄ±, tutarlÄ±lÄ±ktan biraz daha Ã¶dÃ¼n veren senaryolarda kullanÄ±lÄ±r.  
+   Sharded clusterlarda en dÃ¼ÅŸÃ¼k gecikmeli okuma saÄŸlar.  
+   En dÃ¼ÅŸÃ¼k tutarlÄ±lÄ±k seviyesidir.  
+   Ã‡ok yÃ¼ksek performansÄ±n, tutarlÄ±lÄ±ktan daha Ã¶nemli olduÄŸu Ã¶zel durumlar iÃ§in uygundur.
 
 3. **Majority**  
-   Sorgu, replica set üyelerinin çoğunluğu tarafından onaylanmış (acknowledged) veriyi döner.  
-   Yani, okunan dokümanlar çoğunluk tarafından kabul edilmiş ve kalıcı (durable) verilerdir.  
-   Düzgün çalışabilmesi için WriteConcern'in de Majority olması gereklidir.  
-   MongoDB’de yüksek tutarlılık ve veri güvenliği için çoğunluk onaylı veriyi okumayı garanti eder.
+   Sorgu, replica set Ã¼yelerinin Ã§oÄŸunluÄŸu tarafÄ±ndan onaylanmÄ±ÅŸ (acknowledged) veriyi dÃ¶ner.  
+   Yani, okunan dokÃ¼manlar Ã§oÄŸunluk tarafÄ±ndan kabul edilmiÅŸ ve kalÄ±cÄ± (durable) verilerdir.  
+   MongoDBâ€™de yÃ¼ksek tutarlÄ±lÄ±k ve veri gÃ¼venliÄŸi iÃ§in Ã§oÄŸunluk onaylÄ± veriyi okumayÄ± garanti eder.
 
 4. **Linearizable**  
-   MongoDB’de en yüksek tutarlılık garantisi veren read concern seviyesidir.  
-   Bu seviye, okunan verinin, okuma işlemi başlamadan önce çoğunluk tarafından başarıyla yazılmış (acknowledged) tüm verileri içerdiğini garanti eder.  
-   Burada çoğunluk onayı olduğu için writeConcern: majority olmalıdır.  
-   Yani, yapılan okuma, çoğunlukla commit edilmiş tüm yazma işlemlerini yansıtır ve kesin tutarlı (strongly consistent) bir sonuç verir.  
-   Eğer yazma işlemleri hala çoğunluğa ulaşmadıysa, okuma sorgusu bu yazmaların çoğunluğa ulaşmasını bekleyebilir (yani sorgu, yazmalar çoğunlukta commit edilene kadar bekler).  
-   Bu yüzden latency yüksek olabilir.  
-   Bu, tutarlılık için okuma işleminin gerektiğinde bekleyebileceği anlamına gelir.  
-   Sadece primary node üzerinde kullanılabilir.
+   MongoDBâ€™de en yÃ¼ksek tutarlÄ±lÄ±k garantisi veren read concern seviyesidir.  
+   Bu seviye, okunan verinin, okuma iÅŸlemi baÅŸlamadan Ã¶nce Ã§oÄŸunluk tarafÄ±ndan baÅŸarÄ±yla yazÄ±lmÄ±ÅŸ (acknowledged) tÃ¼m verileri iÃ§erdiÄŸini garanti eder.  
+   Burada Ã§oÄŸunluk onayÄ± olduÄŸu iÃ§in writeConcern: majority olmalÄ±dÄ±r.  
+   Yani, yapÄ±lan okuma, Ã§oÄŸunlukla commit edilmiÅŸ tÃ¼m yazma iÅŸlemlerini yansÄ±tÄ±r ve kesin tutarlÄ± (strongly consistent) bir sonuÃ§ verir.  
+   EÄŸer yazma iÅŸlemleri hala Ã§oÄŸunluÄŸa ulaÅŸmadÄ±ysa, okuma sorgusu bu yazmalarÄ±n Ã§oÄŸunluÄŸa ulaÅŸmasÄ±nÄ± bekleyebilir (yani sorgu, yazmalar Ã§oÄŸunlukta commit edilene kadar bekler).  
+   Bu yÃ¼zden latency yÃ¼ksek olabilir.  
+   Bu, tutarlÄ±lÄ±k iÃ§in okuma iÅŸleminin gerektiÄŸinde bekleyebileceÄŸi anlamÄ±na gelir.  
+   Sadece primary node Ã¼zerinde kullanÄ±labilir.
 
 5. **Snapshot**  
-   Snapshot read concern’in garantileri sadece transaction commit işlemi writeConcern "majority" ile yapıldığında geçerlidir.  
-   Race condition sorununu önler.  
-   Transactionlar arası tutarsızlıklar engellenir.  
-   Veri bütünlüğü ve tutarlılığı korunur.
+   Snapshot read concernâ€™in garantileri sadece transaction commit iÅŸlemi writeConcern "majority" ile yapÄ±ldÄ±ÄŸÄ±nda geÃ§erlidir.  
+   Race condition sorununu Ã¶nler.  
+   Transactionlar arasÄ± tutarsÄ±zlÄ±klar engellenir.  
+   Veri bÃ¼tÃ¼nlÃ¼ÄŸÃ¼ ve tutarlÄ±lÄ±ÄŸÄ± korunur.
 
 ---
 
-## Örnekler
+## Ã–rnekler
 
-### Örnek 1:  Majority kullanımı
+### Ã–rnek 1:  Majority kullanÄ±mÄ±
 
-Elimizde 3 düğümlü (node) bir MongoDB replica set var:  
+Elimizde 3 dÃ¼ÄŸÃ¼mlÃ¼ (node) bir MongoDB replica set var:  
 - Node1: Primary  
 - Node2: Secondary  
 - Node3: Secondary  
 
-**Yazma İşlemi**  
-Uygulama bir belgeyi (örneğin `{ userId: 1, name: "Ali" }`) Primary node’a yazar.  
-Bu yazma işlemi Node 1, 2 ve 3’ün çoğunluğu tarafından onaylandığında (acknowledged), yani en az 2 düğümde işlem tamamlandığında, veri **majority commit point**’e ulaşır.  
-Bu noktadan sonra veri artık kalıcı ve çoğunluk tarafından kabul edilmiş olur.
+**Yazma Ä°ÅŸlemi**  
+Uygulama bir belgeyi (Ã¶rneÄŸin `{ userId: 1, name: "Ali" }`) Primary nodeâ€™a yazar.  
+Bu yazma iÅŸlemi Node 1, 2 ve 3â€™Ã¼n Ã§oÄŸunluÄŸu tarafÄ±ndan onaylandÄ±ÄŸÄ±nda (acknowledged), yani en az 2 dÃ¼ÄŸÃ¼mde iÅŸlem tamamlandÄ±ÄŸÄ±nda, veri **majority commit point**â€™e ulaÅŸÄ±r.  
+Bu noktadan sonra veri artÄ±k kalÄ±cÄ± ve Ã§oÄŸunluk tarafÄ±ndan kabul edilmiÅŸ olur.
 
-**Okuma İşlemi (readConcern: "majority")**  
-MongoDB, bu durumda veriyi, en az çoğunluğun onayladığı ve commit ettiği en güncel haliyle döner.  
-Böylece, okunan veri en az iki düğümde var olan ve onaylanmış veri olur.
-
----
-
-### Örnek 2: Snapshot Read Concern ile İşlem Tutarlılığı
-
-Diyelim hesap bakiyesinde 1000 TL var. Aynı anda iki işlem gerçekleşiyor:  
-- İşlem A: 200 TL çekme  
-- İşlem B: 300 TL çekme  
-
-- İşlem A, snapshot ile mevcut bakiye olarak 1000 TL’yi okur.  
-- İşlem B, snapshot ile mevcut bakiye olarak 1000 TL’yi okur.  
-- İşlem A, 200 TL çekimini yapar, ancak transaction bitmediği için diğer işlemler bundan etkilenmez (bakiye hala 1000 TL olarak görünür).  
-- İşlem B, 300 TL çekimini yapar, ancak transaction bitmediği için diğer işlemler bundan etkilenmez.  
-- İşlem A commit edilir, bakiye 800 TL olur.  
-- İşlem B commit edilmeye çalışılır ancak hata oluşur çünkü snapshot alınırken bakiye 1000 TL idi.  
-- Bu yüzden İşlem B iptal edilir ve retry mekanizması ile tekrar denenir.
+**Okuma Ä°ÅŸlemi (readConcern: "majority")**  
+MongoDB, bu durumda veriyi, en az Ã§oÄŸunluÄŸun onayladÄ±ÄŸÄ± ve commit ettiÄŸi en gÃ¼ncel haliyle dÃ¶ner.  
+BÃ¶ylece, okunan veri en az iki dÃ¼ÄŸÃ¼mde var olan ve onaylanmÄ±ÅŸ veri olur.
 
 ---
 
-## Horizonal Sharding'da Veri Dağıtımı
+### Ã–rnek 2: Snapshot Read Concern ile Ä°ÅŸlem TutarlÄ±lÄ±ÄŸÄ±
 
-Diyelim elimizde büyük bir kullanıcı koleksiyonu var ve shard key olarak `userId` kullanıyoruz.  
-MongoDB, `userId` aralıklarına göre veriyi farklı shard’lara (örneğin Shard A, Shard B) yatay olarak böler.  
-Her shard kendi alt kümesindeki kullanıcı verilerini tutar.
+Diyelim hesap bakiyesinde 1000 TL var. AynÄ± anda iki iÅŸlem gerÃ§ekleÅŸiyor:  
+- Ä°ÅŸlem A: 200 TL Ã§ekme  
+- Ä°ÅŸlem B: 300 TL Ã§ekme  
 
----
-
-## Orphaned Doküman Riski Nasıl Oluşur?
-
-- Shard A’daki bazı kullanıcılar artık Shard B’ye taşınacak (chunk migration).  
-- MongoDB, bu veriyi Shard B’ye kopyalar.  
-- Kopyalama bittikten sonra Shard A’dan bu veriler silinir.  
-- Ancak bazen ağ gecikmesi, kesinti ya da hata nedeniyle Shard A’daki eski veriler (artık Shard B’ye ait olanlar) tam olarak temizlenmeyebilir.  
-- İşte bu Shard A’daki fazla kalan dokümanlar **orphaned doküman** olur.  
-- Eğer okuma sorgusu bu orphaned dokümanları da döndürürse, aynı veri veya eski veri birden fazla shard’dan okunabilir, bu da tutarsızlığa yol açar.
+- Ä°ÅŸlem A, snapshot ile mevcut bakiye olarak 1000 TLâ€™yi okur.  
+- Ä°ÅŸlem B, snapshot ile mevcut bakiye olarak 1000 TLâ€™yi okur.  
+- Ä°ÅŸlem A, 200 TL Ã§ekimini yapar, ancak transaction bitmediÄŸi iÃ§in diÄŸer iÅŸlemler bundan etkilenmez (bakiye hala 1000 TL olarak gÃ¶rÃ¼nÃ¼r).  
+- Ä°ÅŸlem B, 300 TL Ã§ekimini yapar, ancak transaction bitmediÄŸi iÃ§in diÄŸer iÅŸlemler bundan etkilenmez.  
+- Ä°ÅŸlem A commit edilir, bakiye 800 TL olur.  
+- Ä°ÅŸlem B commit edilmeye Ã§alÄ±ÅŸÄ±lÄ±r ancak hata oluÅŸur Ã§Ã¼nkÃ¼ snapshot alÄ±nÄ±rken bakiye 1000 TL idi.  
+- Bu yÃ¼zden Ä°ÅŸlem B iptal edilir ve retry mekanizmasÄ± ile tekrar denenir.
 
 ---
 
-## Sharding’de local ile available read concern seviyeleri arasında orphaned document farkı nasıl ortaya çıkar?
+## Horizonal Sharding'da Veri DaÄŸÄ±tÄ±mÄ±
+
+Diyelim elimizde bÃ¼yÃ¼k bir kullanÄ±cÄ± koleksiyonu var ve shard key olarak `userId` kullanÄ±yoruz.  
+MongoDB, `userId` aralÄ±klarÄ±na gÃ¶re veriyi farklÄ± shardâ€™lara (Ã¶rneÄŸin Shard A, Shard B) yatay olarak bÃ¶ler.  
+Her shard kendi alt kÃ¼mesindeki kullanÄ±cÄ± verilerini tutar.
+
+---
+
+## Orphaned DokÃ¼man Riski NasÄ±l OluÅŸur?
+
+- Shard Aâ€™daki bazÄ± kullanÄ±cÄ±lar artÄ±k Shard Bâ€™ye taÅŸÄ±nacak (chunk migration).  
+- MongoDB, bu veriyi Shard Bâ€™ye kopyalar.  
+- Kopyalama bittikten sonra Shard Aâ€™dan bu veriler silinir.  
+- Ancak bazen aÄŸ gecikmesi, kesinti ya da hata nedeniyle Shard Aâ€™daki eski veriler (artÄ±k Shard Bâ€™ye ait olanlar) tam olarak temizlenmeyebilir.  
+- Ä°ÅŸte bu Shard Aâ€™daki fazla kalan dokÃ¼manlar **orphaned dokÃ¼man** olur.  
+- EÄŸer okuma sorgusu bu orphaned dokÃ¼manlarÄ± da dÃ¶ndÃ¼rÃ¼rse, aynÄ± veri veya eski veri birden fazla shardâ€™dan okunabilir, bu da tutarsÄ±zlÄ±ÄŸa yol aÃ§ar.
+
+---
+
+## Shardingâ€™de local ile available read concern seviyeleri arasÄ±nda orphaned document farkÄ± nasÄ±l ortaya Ã§Ä±kar?
 
 - Elimizde iki shard olsun:  
-  - Shard A: userId 1-1000 arası kullanıcıları tutuyor.  
-  - Shard B: userId 1001-2000 arası kullanıcıları tutuyor.  
+  - Shard A: userId 1-1000 arasÄ± kullanÄ±cÄ±larÄ± tutuyor.  
+  - Shard B: userId 1001-2000 arasÄ± kullanÄ±cÄ±larÄ± tutuyor.  
 
-- Chunk migration ile Shard A’daki 800-1000 aralığındaki kullanıcıları Shard B’ye taşımak istiyoruz.  
-- Taşıma tamamlandıktan sonra Shard A’daki bu kullanıcılar silinir. Ancak, network sorunları veya diğer aksaklıklardan dolayı Shard A’da silinmesi gereken bazı veriler kalabilir (bunlar orphaned documents olur).  
+- Chunk migration ile Shard Aâ€™daki 800-1000 aralÄ±ÄŸÄ±ndaki kullanÄ±cÄ±larÄ± Shard Bâ€™ye taÅŸÄ±mak istiyoruz.  
+- TaÅŸÄ±ma tamamlandÄ±ktan sonra Shard Aâ€™daki bu kullanÄ±cÄ±lar silinir. Ancak, network sorunlarÄ± veya diÄŸer aksaklÄ±klardan dolayÄ± Shard Aâ€™da silinmesi gereken bazÄ± veriler kalabilir (bunlar orphaned documents olur).  
 
-**Örnek:**  
-Sorgumuz `userId = 950` olan kullanıcıyı getirmek olsun.  
+**Ã–rnek:**  
+Sorgumuz `userId = 950` olan kullanÄ±cÄ±yÄ± getirmek olsun.  
 
-- Eğer `readConcern: local` kullanılırsa, sorgu verinin güncel hali olan Shard B üzerinden yapılır. Çünkü MongoDB, shard key’e göre doğru shard’a yönlendirme yapar ve en güncel veriyi okur.  
-- Ancak `readConcern: available` kullanılırsa, okuma mümkün olan en hızlı shard’dan yapılır. Eğer sorgu Shard A’ya giderse, silinmesi gereken ve artık geçersiz olan orphaned document okunabilir. Bu da tutarsız veri dönme riskini artırır.
+- EÄŸer `readConcern: local` kullanÄ±lÄ±rsa, sorgu verinin gÃ¼ncel hali olan Shard B Ã¼zerinden yapÄ±lÄ±r. Ã‡Ã¼nkÃ¼ MongoDB, shard keyâ€™e gÃ¶re doÄŸru shardâ€™a yÃ¶nlendirme yapar ve en gÃ¼ncel veriyi okur.  
+- Ancak `readConcern: available` kullanÄ±lÄ±rsa, okuma mÃ¼mkÃ¼n olan en hÄ±zlÄ± shardâ€™dan yapÄ±lÄ±r. EÄŸer sorgu Shard Aâ€™ya giderse, silinmesi gereken ve artÄ±k geÃ§ersiz olan orphaned document okunabilir. Bu da tutarsÄ±z veri dÃ¶nme riskini artÄ±rÄ±r.
 
 ---
 
-# Sonuç
+# SonuÃ§
 
-MongoDB, replikasyon ve tutarlılık yönetimini, replica set yapısı ile primary-secondary modeli üzerinden sağlar. Read preference ve read/write concern ayarlarıyla, uygulamanın ihtiyaçlarına göre tutarlılık ve erişilebilirlik dengesi esnekçe yönetilir. Sharding ise yatayda veriyi dağıtarak ölçeklenebilirlik sağlar ancak doğru okuma tutarlılığı ayarları yapılmazsa orphaned document gibi tutarsızlıklara sebep olabilir.
+MongoDB, replikasyon ve tutarlÄ±lÄ±k yÃ¶netimini, replica set yapÄ±sÄ± ile primary-secondary modeli Ã¼zerinden saÄŸlar. Read preference ve read/write concern ayarlarÄ±yla, uygulamanÄ±n ihtiyaÃ§larÄ±na gÃ¶re tutarlÄ±lÄ±k ve eriÅŸilebilirlik dengesi esnekÃ§e yÃ¶netilir. Sharding ise yatayda veriyi daÄŸÄ±tarak Ã¶lÃ§eklenebilirlik saÄŸlar ancak doÄŸru okuma tutarlÄ±lÄ±ÄŸÄ± ayarlarÄ± yapÄ±lmazsa orphaned document gibi tutarsÄ±zlÄ±klara sebep olabilir.
 
 ---
 
 # Kaynaklar ve Detaylar
 
-- MongoDB Resmi Dokümantasyonu  
-- CAP Teoremi açıklamaları  
+- MongoDB Resmi DokÃ¼mantasyonu  
+- CAP Teoremi aÃ§Ä±klamalarÄ±  
 - Replica Set ve Sharding mimarileri  
 
 ---
