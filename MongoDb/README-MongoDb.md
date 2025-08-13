@@ -104,8 +104,7 @@ Bu tercih, uygulamanın performans, tutarlılık ve erişilebilirlik ihtiyaçlar
 
 4. **Linearizable**  
    MongoDB’de en yüksek tutarlılık garantisi veren read concern seviyesidir.  
-   Bu seviye, okunan verinin, okuma işlemi başlamadan önce çoğunluk tarafından başarıyla yazılmış (acknowledged) tüm verileri içerdiğini garanti eder.  
-   Burada çoğunluk onayı olduğu için writeConcern: majority olmalıdır.  
+   Bu seviye, okunan verinin, okuma işlemi başlamadan önce çoğunluk tarafından başarıyla yazılmış (acknowledged) tüm verileri içerdiğini garanti eder.   
    Yani, yapılan okuma, çoğunlukla commit edilmiş tüm yazma işlemlerini yansıtır ve kesin tutarlı (strongly consistent) bir sonuç verir.  
    Eğer yazma işlemleri hala çoğunluğa ulaşmadıysa, okuma sorgusu bu yazmaların çoğunluğa ulaşmasını bekleyebilir (yani sorgu, yazmalar çoğunlukta commit edilene kadar bekler).  
    Bu yüzden latency yüksek olabilir.  
