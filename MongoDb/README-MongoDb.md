@@ -188,7 +188,7 @@ Her shard kendi alt kümesindeki kullanıcı verilerini tutar.
 **Örnek:**  
 Sorgumuz `userId = 950` olan kullanıcıyı getirmek olsun.  
 
-- Eğer `readConcern: local` kullanılırsa, sorgu verinin güncel hali olan Shard B üzerinden yapılır. Çünkü MongoDB, shard key’e göre doğru shard’a yönlendirme yapar ve en güncel veriyi okur.  
+- Sorgu, config server'daki chunk bilgisine göre doğru shard'a (Shard B) yönlendirilir ve o shard'ın en güncel (committed veya orphaned olmayan) verisini okur.
 - Ancak `readConcern: available` kullanılırsa, okuma mümkün olan en hızlı shard’dan yapılır. Eğer sorgu Shard A’ya giderse, silinmesi gereken ve artık geçersiz olan orphaned document okunabilir. Bu da tutarsız veri dönme riskini artırır.
 
 ---
