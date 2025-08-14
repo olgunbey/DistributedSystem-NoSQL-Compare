@@ -4,69 +4,12 @@ using MongoDB.Bson.Serialization.Attributes;
 using MongoDB.Driver;
 using System.Text.Json;
 
-static async Task AddToCollection()
-{
 
-    var connectionString = "mongodb://127.0.0.1:27017,127.0.0.1:27018,127.0.0.1:27019/,127.0.0.1:27020/?replicaSet=rs0";
-
-    using (MongoClient client = new MongoClient(connectionString))
-    {
-        var database = client.GetDatabase("test");
-
-        var person = new Person
-        {
-            Name = "Ulaş",
-            Age = 21
-        };
-        var options = new MongoCollectionSettings
-        {
-            WriteConcern = new WriteConcern(new WriteConcern.WCount(1))
-        };
-        var collection = database.GetCollection<BsonDocument>("testCollection", options);
-        var bsonDocument = BsonDocument.Parse(JsonSerializer.Serialize(person));
-        await collection.InsertOneAsync(bsonDocument);
-    }
-}
-
-
-static async Task<List<BsonDocument>> ReadCollection()
-{
-    var connectionString = "mongodb://127.0.0.1:27017,127.0.0.1:27018,127.0.0.1:27019/,127.0.0.1:27020/?replicaSet=rs0";
-
-    using (MongoClient client = new MongoClient(connectionString))
-    {
-        var database = client.GetDatabase("test");
-
-        var person = new Person
-        {
-            Name = "Arda dsd",
-            Age = 30
-        };
-        var options = new MongoCollectionSettings
-        {
-            ReadPreference = ReadPreference.Secondary,
-            ReadConcern = new ReadConcern(ReadConcernLevel.Available)
-        };
-        try
-        {
-            var collection = database.GetCollection<BsonDocument>("testCollection", options);
-            var data = (await collection.FindAsync(FilterDefinition<BsonDocument>.Empty)).ToList();
-            return data;
-        }
-        catch (Exception)
-        {
-
-            throw;
-        }
-    }
-}
-
-Console.WriteLine("Hello, World!");
-
-//await AddToCollection();
-await ReadCollection();
-
-Console.ReadLine();
+#region WriteConcernOneAndReadConcernLinearizableTestCase
+WriteConcernOneAndReadConcernLinearizableTestCase testCase1 = new WriteConcernOneAndReadConcernLinearizableTestCase();
+await testCase1.AddToCollection();
+await testCase1.ReadToCollection();
+#endregion
 
 
 
@@ -76,5 +19,53 @@ public class Person
     public ObjectId Id { get; set; }
     public string Name { get; set; }
     public int Age { get; set; }
+}
+
+public abstract class MongoDbExecuter
+{
+    public abstract Task AddToCollection();
+    public abstract Task<List<BsonDocument>> ReadToCollection();
+    public IMongoDatabase GetMongoDatabase()
+    {
+        var connectionString = "mongodb://127.0.0.1:27017,127.0.0.1:27018,127.0.0.1:27019/,127.0.0.1:27020/?replicaSet=rs0";
+        return new MongoClient(connectionString).GetDatabase("test");
+    }
+}
+
+public class WriteConcernOneAndReadConcernLinearizableTestCase : MongoDbExecuter
+{
+    private readonly IMongoDatabase _mongoClient;
+    public WriteConcernOneAndReadConcernLinearizableTestCase()
+    {
+        _mongoClient = base.GetMongoDatabase();
+    }
+    public override Task AddToCollection()
+    {
+        var person = new Person
+        {
+            Name = "TestData 123",
+            Age = 19
+        };
+        var options = new MongoCollectionSettings
+        {
+            WriteConcern = new WriteConcern(new WriteConcern.WCount(1))
+        };
+        var collection = _mongoClient.GetCollection<BsonDocument>("testCollection", options);
+        var bsonDocument = BsonDocument.Parse(JsonSerializer.Serialize(person));
+        return collection.InsertOneAsync(bsonDocument);
+    }
+
+    public override async Task<List<BsonDocument>> ReadToCollection()
+    {
+        var options = new MongoCollectionSettings
+        {
+            ReadConcern = new ReadConcern(ReadConcernLevel.Linearizable)
+        };
+        var collection = _mongoClient.GetCollection<BsonDocument>("testCollection", options);
+        var data = await collection.Find(FilterDefinition<BsonDocument>.Empty).ToListAsync();
+
+        Console.WriteLine();
+        return data;
+    }
 }
 
