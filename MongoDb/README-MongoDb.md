@@ -173,7 +173,7 @@ Her shard kendi alt kümesindeki kullanıcı verilerini tutar.
 - Ancak bazen ağ gecikmesi, kesinti ya da hata nedeniyle Shard A’daki eski veriler (artık Shard B’ye ait olanlar) tam olarak temizlenmeyebilir.  
 - İşte bu Shard A’daki fazla kalan dokümanlar **orphaned doküman** olur.  
 - Eğer okuma sorgusu bu orphaned dokümanları da döndürürse, aynı veri veya eski veri birden fazla shard’dan okunabilir, bu da tutarsızlığa yol açar.
-
+- Sistem failover olduğu zaman orphaned veri oluşma ihtimali vardır.
 ---
 
 ## Sharding’de local ile available read concern seviyeleri arasında orphaned document farkı nasıl ortaya çıkar?
