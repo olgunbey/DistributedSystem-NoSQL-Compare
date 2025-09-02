@@ -103,8 +103,9 @@ Bu tercih, uygulamanın performans, tutarlılık ve erişilebilirlik ihtiyaçlar
    Sorgu, replica set üyelerinin çoğunluğu tarafından onaylanmış (acknowledged) veriyi döner.  
    Yani, okunan dokümanlar çoğunluk tarafından kabul edilmiş ve kalıcı (durable) verilerdir.  
    MongoDB’de yüksek tutarlılık ve veri güvenliği için çoğunluk onaylı veriyi okumayı garanti eder.
+   Olası node'lar arasında çökmelerde nodelar arası rollback'i azaltır
 
-4. **Linearizable**  
+5. **Linearizable**  
    MongoDB’de en yüksek tutarlılık garantisi veren read concern seviyesidir.  
    Bu seviye, okunan verinin, okuma işlemi başlamadan önce çoğunluk tarafından başarıyla yazılmış (acknowledged) tüm verileri içerdiğini garanti eder.   
    Yani, yapılan okuma, çoğunlukla commit edilmiş tüm yazma işlemlerini yansıtır ve kesin tutarlı (strongly consistent) bir sonuç verir.  
@@ -113,7 +114,7 @@ Bu tercih, uygulamanın performans, tutarlılık ve erişilebilirlik ihtiyaçlar
    Bu, tutarlılık için okuma işleminin gerektiğinde bekleyebileceği anlamına gelir.  
    Sadece primary node üzerinde kullanılabilir.
 
-5. **Snapshot**  
+6. **Snapshot**  
    Snapshot read concern’in garantileri sadece transaction commit işlemi writeConcern "majority" ile yapıldığında geçerlidir.  
    Race condition sorununu önler.  
    Transactionlar arası tutarsızlıklar engellenir.  
