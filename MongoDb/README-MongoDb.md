@@ -8,7 +8,7 @@ Bu doküman, MongoDB'nin replikasyon yönetimi, read/write concern, read prefere
 
 MongoDB, verileri tek bir düğüme, yani **primary** düğüme yazar. Daha sonra bu primary düğüm, değişiklikleri **OPLOG** aracılığı ile  **secondary** düğümlere aktarır ve onları güncel tutar.
 
-Ancak, NoSQL veritabanları arasında replikasyon ve tutarlılık yaklaşımları farklılık gösterebilir. MongoDB, **CAP Teoremi** kapsamında yapılandırılabilir; yani kullanım senaryosuna bağlı olarak:
+NoSQL veritabanları arasında replikasyon ve tutarlılık yaklaşımları farklılık gösterebilir. MongoDB, **CAP Teoremi** kapsamında yapılandırılabilir; yani kullanım senaryosuna bağlı olarak:
 
 - **CP (Consistency + Partition Tolerance)** modu ile güçlü tutarlılık sağlanabilir,  
 - veya **AP (Availability + Partition Tolerance)** modu ile yüksek erişilebilirlik ön planda tutulabilir.
