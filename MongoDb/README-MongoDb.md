@@ -37,7 +37,6 @@ Bu, verinin kaç düğüme yazıldıktan sonra "başarılı" kabul edileceğini 
 - Örneğin elimizde 5 düğüm (1 Primary, 4 Secondary) varsa, w: majority demek en az 3 düğümün yazmayı onaylaması gerektiği anlamına gelir.
 - Eğer w: 2 yazarsak, çoğunluk yerine en az 2 düğüme yazıldığında işlem başarılı kabul edilir. Bu, yazma işlemini hızlandırabilir ancak veri kaybı riskini artırır.
 - Sistem failover durumuna geçerse  w: majority seçilmesi rollback riskini azaltır.
-- Eğer sistemde commit majority point hesaplanırsa rollback riski komple ortadan kalkar.
 
 ---
 ## MongoDB: Çoğunluk Kaybında Tüm Düğümlerin Secondary Olması
