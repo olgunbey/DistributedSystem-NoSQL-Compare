@@ -89,7 +89,7 @@ Bu tercih, uygulamanın performans, tutarlılık ve erişilebilirlik ihtiyaçlar
 
 1. **Local**  
    Varsayılan ayarlarda okuma yaparken, verinin çoğunluk tarafından kabul edilip edilmediği kontrol edilmez; bu nedenle okunan veri henüz tam olarak kalıcı olmayabilir ve ileride geri alınabilir.  
-   Orphaned doküman riski düşüktür, çünkü okuma sadece ilgili shard’daki veriye odaklanır.
+   Orphaned doküman riski düşüktür, çünkü okuma sadece primary shard’daki veriye odaklanır.
 
 2. **Available**  
    Sharded koleksiyonlarda yetim doküman (orphaned document) dönme riski vardır.  
